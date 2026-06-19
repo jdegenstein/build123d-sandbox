@@ -2,10 +2,6 @@ print("Starting package installation...")
 import micropip
 import sys
 
-micropip.set_index_urls(
-    ["https://yeicor.github.io/OCP.wasm", "https://pypi.org/simple"]
-)
-
 print("Mocking incompatible OS-level and server packages...")
 
 # 1. Mock pyperclip (relies on OS-level clipboards)
@@ -50,9 +46,25 @@ micropip.add_mock_package(
     },
 )
 
+# 6. Mock strict dependencies to satisfy build123d's package resolution.
+# Passing an empty `modules` dict prevents Micropip from creating dummy
+# modules that would overwrite the real ones loaded by the -OCP.wasm packages.
+micropip.add_mock_package("cadquery-ocp-novtk", "7.9.3.1", modules={})
+micropip.add_mock_package("lib3mf", "2.4.1", modules={})
+
 print("Installing core dependencies (using upstream ocp_vscode)...")
-# Install standard upstream packages instead of the custom fork
-await micropip.install(["lib3mf", "ssl", "ocp_vscode==3.1.2", "build123d", "sqlite3"])
+# Install the WASM variants explicitly pinned to match build123d 0.11.0 expectations
+await micropip.install(
+    [
+        "cadquery-ocp-novtk-OCP.wasm==7.9.3.1.post202605200208",
+        "lib3mf-OCP.wasm==2.5.0.post202605200051",
+        "ssl",
+        "ocp_vscode==3.1.2",
+        "build123d==0.11.0",  # NOTE: update necessary pins
+        "sqlite3",
+    ],
+    keep_going=True,
+)
 # NOTE: to update ocp_vscode one must also update the required three-cad-viewer version
 # e.g. npm install three-cad-viewer@4.1.2 at time of writing
 
